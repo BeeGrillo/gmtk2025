@@ -1,10 +1,10 @@
 
 KeyMap = {}
 Options= {}
-SelectedOption = 1
+SelectedOption = {}
 State = {}
-
-
+Character = require "character"
+Scene = require "scene"
 
 GameStates = {
     title = function ()
@@ -17,6 +17,10 @@ GameStates = {
             {
                 text = "Exit Game",
                 nextState = PlayerMoves.exit
+            },
+            {
+                text = "About",
+                nextState = PlayerMoves.about
             }
         }
         KeyMap = {
@@ -24,11 +28,14 @@ GameStates = {
             enter   = PlayerMoves.select,
             space   = PlayerMoves.select,
             w       = PlayerMoves.selectUp,
-            up      = PlayerMoves.selectDown,
+            up      = PlayerMoves.selectUp,
+            down    = PlayerMoves.selectDown,
+            s    = PlayerMoves.selectDown,
         }
-    end,
-    prerun = function ()
-        
+        State = {
+            draw = Draw.title,
+            update = Update.title
+        }
     end,
     running=function ()
         KeyMap = {
@@ -44,15 +51,20 @@ GameStates = {
             p       = PlayerMoves.pause,
             escape  = PlayerMoves.pause
         }
+        Character.Actions.run(Character)
+        State = {
+            draw = Draw.running,
+            update = Update.running
+        }
     end,
     pause = function ()
         SelectedOption = 1
         Options = {
-            resume = {
+            {
                 text = "Resume",
                 nextState = PlayerMoves.running
             },
-            quit = {
+            {
                 text = "Exit from game",
                 nextState = PlayerMoves.exit
             }
@@ -75,16 +87,22 @@ GameStates = {
         
     end,
     exit= function ()
-        
+        love.event.quit()
     end
 }
 
 PlayerMoves = {
+    about = function ()
+    end,
+    prerun = function ()
+        GameStates.running()
+    end,
+        
     jump = function()
-
+        Character.Actions.jump(Character)
     end,
     accel= function()
-
+        Character.Actions.jump(Character)
     end,
     stand= function ()
         
@@ -96,10 +114,12 @@ PlayerMoves = {
         
     end,
     exit=function ()
-        
+        love.event.quit()
     end,
     select=function ()
-        
+        if SelectedOption and Options[SelectedOption] then
+            Options[SelectedOption].nextState()
+        end
     end,
     selectUp=function ()
         if #Options >=1 and SelectedOption == 1 then
@@ -120,6 +140,34 @@ PlayerMoves = {
     end
 }
 
+Draw = {
+    title = function()
+        if Options and #Options > 0 then
+            for i, option in ipairs(Options) do
+                local prefix = (i == SelectedOption) and "> " or "  "
+                love.graphics.print(prefix .. option.text, 10, 10 + (i - 1) * 20)
+            end
+        end
+    end,
+    running = function ()
+        love.graphics.clear(0.5, 0.5, 0.5)
+        Character:draw()
+        Scene:draw()
+    end,
+
+}
+
+Update = {
+    running = function (dt)
+        Character:update(dt)
+        Scene:update(dt)
+    end,
+    title = function()
+        
+    end,
+}
+
+
 love.keypressed = function(pressed_key)
     if KeyMap[pressed_key] then
         KeyMap[pressed_key]()
@@ -127,10 +175,14 @@ love.keypressed = function(pressed_key)
 end
 
 function love.draw()
-    
-    
+    if State.draw then 
+        State.draw()
+    end
 end
 
 function love.update(dt)
-
+    if State.update then 
+        State.update(dt)
+    end
 end
+GameStates.title()
